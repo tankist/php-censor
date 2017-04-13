@@ -141,14 +141,20 @@ class RemoteGitBuild extends Build
         $commit  = $this->getCommitId();
         $chdir   = 'cd "%s"';
 
-        if (empty($this->getEnvironment()) && !empty($commit) && $commit != 'Manual') {
-            $cmd = $chdir . ' && git checkout %s --quiet';
+        if (empty($this->getEnvironment()) && !empty($commit) && $commit !== 'Manual') {
+            $cmd     = $chdir . ' && git checkout %s --quiet';
             $success = $builder->executeCommand($cmd, $cloneTo, $commit);
         }
 
         // Always update the commit hash with the actual HEAD hash
         if ($builder->executeCommand($chdir . ' && git rev-parse HEAD', $cloneTo)) {
-            $this->setCommitId(trim($builder->getLastOutput()));
+            $commit = trim($builder->getLastOutput());
+
+            $this->setCommitId($commit);
+
+            if ($builder->executeCommand($chdir . ' && git log -1 --pretty=format:%%s %s', $cloneTo, $commit)) {
+                $this->setCommitMessage(trim($builder->getLastOutput()));
+            }
         }
 
         return $success;
